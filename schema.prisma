@@ -646,3 +646,18 @@ enum CategoryLicense {
   AD
   AE
 }
+
+model A2aTasks {
+  taskId    String   @id @map("task_id")
+  state     String   @db.VarChar(50)
+  request   Json     @db.JsonB
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  result    Json?    @db.JsonB
+  error     String?  @db.Text
+
+  @@index([state])
+  @@index([createdAt])
+  @@map("a2a_tasks")
+}
