@@ -1,0 +1,648 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String                  @id @default(uuid())
+  email                  String                  @unique
+  password               String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime?               @updatedAt
+  active                 Boolean                 @default(true)
+  role                   UserRole                @default(CANDIDATO)
+  status                 UserStatus              @default(ACTIVE)
+  companyId              String?                 @unique
+  documentNumber         String?
+  documentType           DocumentType?
+  securityQuestion       String?
+  securityQuestionAnswer String?
+  corporateEmail         String?                 @unique
+  personalCompanyId      String?                 @unique
+  recruitingForCompanyId String?
+  jobVacancyResponsibles JobVacancyResponsible[]
+  MatchingCurriculo      MatchingCurriculo[]
+  company                Company?                @relation("CompanyOwner", fields: [companyId], references: [id])
+  personalCompany        Company?                @relation("User_personalCompanyIdToCompany", fields: [personalCompanyId], references: [id])
+  recruitingForCompany   Company?                @relation("CompanyRecruiters", fields: [recruitingForCompanyId], references: [id])
+  responsibleForCompany  Company?                @relation("Company_userResponsibleForVacancyToUser")
+  cv                     UserCV?
+  complement             UserComplement?
+  userEmbeddings         UserEmbeddings?
+  userSessions           UserSession[]
+}
+
+model Position {
+  id           Int                        @id @default(autoincrement())
+  name         String                     @unique
+  description  String?
+  CboType      Int?
+  CboCode      Int?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  isManual     Boolean                    @default(false)
+  experiences  CvProfessionalExperience[]
+  jobVacancies JobVacancy[]               @relation("PositionToJobVacancy")
+  userCVs      UserCV[]
+}
+
+model CvSpecificKnowledge {
+  id        Int    @id @default(autoincrement())
+  knowledge String
+  userCvId  String
+  userCv    UserCV @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model UserCV {
+  id                      String                     @id @default(uuid())
+  userId                  String                     @unique
+  salaryExpectation       Float?
+  currency                Currency?
+  remoteWork              Boolean?
+  willingnessToTravel     Boolean?
+  licensed                Boolean?
+  licenseCategory         String?
+  ownVehicle              Boolean?
+  completed               Boolean                    @default(false)
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  currentPosition         String?
+  desiredPosition         String?
+  summary                 String?
+  maritalStatus           String?
+  millitaryCertificate    Boolean?
+  positionId              Int?
+  userCVWishPositionsId   String?
+  CvCourse                CvAditionalCourse[]
+  CvCertification         CvCertification[]
+  CvEducation             CvEducation[]
+  hardSkills              CvHardSkill[]
+  languages               CvLanguage[]
+  professionalExperiences CvProfessionalExperience[]
+  seminarsAndWorkshops    CvSeminarWorkshop[]
+  softSkills              CvSoftSkill[]
+  specificKnowledges      CvSpecificKnowledge[]
+  volunteering            CvVolunteering[]
+  Position                Position?                  @relation(fields: [positionId], references: [id])
+  userCVWishPositions     UserCVWishPositions?       @relation(fields: [userCVWishPositionsId], references: [id], onDelete: Cascade)
+  user                    User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userCVVacancies         UserCVVacancy[]
+}
+
+model UserComplement {
+  id                                Int       @id @default(autoincrement())
+  userId                            String    @unique
+  firstName                         String?
+  lastName                          String?
+  zipcode                           String?
+  address                           String?
+  city                              String?
+  state                             String?
+  country                           String?
+  phone                             String?
+  latitude                          Float?
+  longitude                         Float?
+  nacionality                       String?
+  gender                            String?
+  createdAt                         DateTime  @default(now())
+  updatedAt                         DateTime? @updatedAt
+  birthDate                         DateTime?
+  socialName                        String?
+  attendedGovernmentCourseMT        Boolean?
+  benefitType                       String?
+  complemente                       String?
+  courseAreas                       String?
+  coursesTaken                      String?
+  disabilityType                    String?
+  hasDisability                     Boolean?
+  interestedInProfessionalTraining  Boolean?
+  neighborhood                      String?
+  participatesSerFamiliaMulher      Boolean?
+  raceColor                         String?
+  receivesGovernmentBenefit         Boolean?
+  residenceNumber                   String?
+  coursesInterestedIn               String?
+  coursesFields                     String?
+  governmentBenefitType             String?
+  hasInterestInProfessionalTraining Boolean?
+  listCourses                       String?
+  participatedGovernmentCourse      Boolean?
+  serFamiliaProgram                 Boolean?
+  user                              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CvHardSkill {
+  id          Int      @id @default(autoincrement())
+  skill       String
+  description String?
+  userCvId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userCv      UserCV   @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvSoftSkill {
+  id          Int      @id @default(autoincrement())
+  skill       String
+  description String?
+  userCvId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userCv      UserCV   @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvLanguage {
+  id        Int           @id @default(autoincrement())
+  language  String
+  userCvId  String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  level     LanguageLevel
+  userCv    UserCV        @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvProfessionalExperience {
+  id                     Int                    @id @default(autoincrement())
+  company                String
+  activity               String?
+  employmentRelationship EmploymentRelationship
+  workFormat             WorkFormat
+  workLocation           String
+  startDate              DateTime
+  endDate                DateTime?
+  userCvId               String
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  position               String
+  positionId             Int?
+  positionRel            Position?              @relation(fields: [positionId], references: [id])
+  userCv                 UserCV                 @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvEducation {
+  id           Int       @id @default(autoincrement())
+  institution  String?
+  course       String?
+  fieldOfStudy String?
+  startDate    DateTime?
+  endDate      DateTime?
+  userCvId     String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  status       String?
+  courseType   String?
+  userCv       UserCV    @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvAditionalCourse {
+  id                Int       @id @default(autoincrement())
+  name              String
+  description       String?
+  technologicalArea String
+  technologicalAxis String
+  modality          String
+  startDate         DateTime
+  endDate           DateTime?
+  userCvId          String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  institution       String?
+  userCv            UserCV    @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvCertification {
+  id             Int       @id @default(autoincrement())
+  name           String
+  description    String?
+  institution    String
+  emitionDate    DateTime
+  expirationDate DateTime?
+  credentialCode String?
+  credentialUrl  String?
+  userCvId       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  userCv         UserCV    @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvVolunteering {
+  id        Int       @id @default(autoincrement())
+  name      String
+  entity    String
+  activity  String
+  startDate DateTime
+  endDate   DateTime?
+  userCvId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  userCv    UserCV    @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model CvSeminarWorkshop {
+  id                Int      @id @default(autoincrement())
+  name              String
+  organizer         String
+  participationType String
+  date              DateTime
+  userCvId          String
+  userCv            UserCV   @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+}
+
+model Company {
+  id                        String              @id @default(uuid())
+  companyName               String
+  businessName              String?
+  documentNumber            String?
+  active                    Boolean             @default(true)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime?
+  nature                    Nature
+  mainName                  String
+  companySize               String
+  companyType               String
+  isHeadQuarters            Boolean
+  companyDescription        String
+  zoneType                  ZoneType
+  zipCode                   String
+  address                   String
+  country                   String
+  city                      String
+  state                     String
+  phoneNumber               String
+  adminPosition             String
+  complement                String?
+  headQuarterName           String?
+  latitude                  Float?
+  longitude                 Float?
+  district                  String?
+  number                    String?
+  userResponsibleForVacancy String?             @unique
+  jobVacancies              JobVacancy[]
+  matchingCurriculos        MatchingCurriculo[]
+  recruiters                Recruiter[]
+  user                      User?               @relation("CompanyOwner")
+  personalUsers             User?               @relation("User_personalCompanyIdToCompany")
+  recruiterUsers            User[]              @relation("CompanyRecruiters")
+  responsibleUser           User?               @relation("Company_userResponsibleForVacancyToUser", fields: [userResponsibleForVacancy], references: [id])
+  vacancyEmbeddings         VacancyEmbeddings[]
+}
+
+model Recruiter {
+  id                      String   @id @default(uuid())
+  companyId               String
+  fullName                String
+  email                   String   @unique
+  cpf                     String
+  responsibleForVacancies Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  company                 Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model JobVacancyResponsible {
+  id           Int        @id @default(autoincrement())
+  jobVacancyId Int        @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime?  @updatedAt
+  userId       String?
+  jobVacancy   JobVacancy @relation(fields: [jobVacancyId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model JobVacancyAddress {
+  id           Int        @id @default(autoincrement())
+  zipCode      String
+  street       String
+  number       String
+  complement   String?
+  district     String
+  city         String
+  state        String
+  jobVacancyId Int        @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime?  @updatedAt
+  jobVacancy   JobVacancy @relation(fields: [jobVacancyId], references: [id], onDelete: Cascade)
+}
+
+model JobVacancy {
+  id                    Int                    @id @default(autoincrement())
+  companyId             String
+  title                 String
+  position              String
+  enterpriseTitle       String?
+  level                 String?
+  location              String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime?              @updatedAt
+  active                Boolean                @default(true)
+  applicationDeadline   DateTime?
+  confidential          Boolean?
+  contractType          String?
+  description           String?
+  educationLevel        String?
+  estimatedStartDate    DateTime?
+  graduationRequired    Boolean?
+  requiredQualification String?
+  salaryRange           String?
+  trainingDescription   String?
+  trainingRequired      Boolean?
+  vacancies             Int?
+  workFormat            String?
+  workShift             String?
+  benefits              String?
+  contractTermDetails   String?
+  contractTermType      String?
+  dailyWorkload         String?
+  endTime               String?
+  paymentFrequency      String?
+  pcdOnly               Boolean?
+  requiresExperience    Boolean?
+  requiresLicense       Boolean?
+  requiresOwnVehicle    Boolean?
+  startTime             String?
+  workDays              String[]
+  workScale             String?
+  categoryLicense       CategoryLicense?
+  courseName            String?
+  generalObservations   String?
+  category              String?
+  redirectUrl           String?
+  source                String?
+  externalId            String?
+  positionId            Int?
+  serFamiliaMulherOnly  Boolean?
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  positionRel           Position?              @relation("PositionToJobVacancy", fields: [positionId], references: [id])
+  address               JobVacancyAddress?
+  responsible           JobVacancyResponsible?
+  MatchingCurriculo     MatchingCurriculo[]
+  userCVVacancies       UserCVVacancy[]
+  VacancyEmbeddings     VacancyEmbeddings[]
+}
+
+model HiringStatus {
+  id              Int             @id @default(autoincrement())
+  ptStatus        String?
+  enStatus        String?
+  esStatus        String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime?       @updatedAt
+  userCVVacancies UserCVVacancy[]
+}
+
+model UserCVVacancy {
+  id              String            @id @default(uuid())
+  userCvId        String
+  idVacancy       Int
+  createdAt       DateTime          @default(now())
+  companyFeedback String?
+  idHiringStatus  Int
+  feedbackHistory FeedbackHistory[]
+  hiringStatus    HiringStatus      @relation(fields: [idHiringStatus], references: [id])
+  vacancy         JobVacancy        @relation(fields: [idVacancy], references: [id])
+  userCv          UserCV            @relation(fields: [userCvId], references: [id], onDelete: Cascade)
+
+  @@unique([userCvId, idVacancy])
+}
+
+model FeedbackHistory {
+  id              String        @id @default(uuid())
+  message         String
+  userCVVacancyId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  userCVVacancy   UserCVVacancy @relation(fields: [userCVVacancyId], references: [id], onDelete: Cascade)
+}
+
+model UserCVWishPositions {
+  id            String    @id @default(uuid())
+  wishPosition1 String
+  wishPosition2 String?
+  wishPosition3 String?
+  wishPosition4 String?
+  wishPosition5 String?
+  wishPosition6 String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime? @updatedAt
+  UserCV        UserCV[]
+}
+
+model MatchingCurriculo {
+  userId          String
+  companyId       String
+  vacancyId       Int
+  matchPercentage Float
+  details         String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime?  @updatedAt
+  id              Int        @id @default(autoincrement())
+  company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vacancy         JobVacancy @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId, vacancyId])
+}
+
+model VacancyEmbeddings {
+  id                Int        @id @default(autoincrement())
+  companyId         String
+  vacancyId         Int
+  vacancyFeatures   String?
+  vacancyEmbeddings Float[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime?  @updatedAt
+  company           Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vacancy           JobVacancy @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([vacancyId])
+}
+
+model UserEmbeddings {
+  id               Int       @id @default(autoincrement())
+  userId           String    @unique
+  softFeatures     String?
+  hardFeatures     String?
+  otherFeatures    String?
+  softEmbeddings   Float[]
+  hardEmbeddings   Float[]
+  otherEmbeddings  Float[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime? @updatedAt
+  globalEmbeddings Float[]
+  globalFeatures   String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserSession {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  sessionPath String?  @map("session_path")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("UserSession")
+}
+
+model app_states {
+  app_name    String   @id @db.VarChar(128)
+  state       Json
+  update_time DateTime @db.Timestamp(6)
+}
+
+model events {
+  id                         String   @db.VarChar(128)
+  app_name                   String   @db.VarChar(128)
+  user_id                    String   @db.VarChar(128)
+  session_id                 String   @db.VarChar(128)
+  invocation_id              String   @db.VarChar(256)
+  author                     String   @db.VarChar(256)
+  branch                     String?  @db.VarChar(256)
+  timestamp                  DateTime @db.Timestamp(6)
+  content                    Json?
+  actions                    Bytes
+  long_running_tool_ids_json String?
+  grounding_metadata         Json?
+  partial                    Boolean?
+  turn_complete              Boolean?
+  error_code                 String?  @db.VarChar(256)
+  error_message              String?  @db.VarChar(1024)
+  interrupted                Boolean?
+  sessions                   sessions @relation(fields: [app_name, user_id, session_id], references: [app_name, user_id, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id, app_name, user_id, session_id])
+}
+
+model sessions {
+  app_name    String   @db.VarChar(128)
+  user_id     String   @db.VarChar(128)
+  id          String   @db.VarChar(128)
+  state       Json
+  create_time DateTime @db.Timestamp(6)
+  update_time DateTime @db.Timestamp(6)
+  events      events[]
+
+  @@id([app_name, user_id, id])
+}
+
+model user_states {
+  app_name    String   @db.VarChar(128)
+  user_id     String   @db.VarChar(128)
+  state       Json
+  update_time DateTime @db.Timestamp(6)
+
+  @@id([app_name, user_id])
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  CANDIDATO
+  EMPRESA
+}
+
+enum UserStatus {
+  ACTIVE
+  DELETED
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+}
+
+enum Currency {
+  BRL
+}
+
+enum DocumentType {
+  CPF
+  RG
+  CNH
+  CNPJ
+}
+
+enum Nature {
+  MISTA
+  PRIVADA
+  PUBLICA
+}
+
+enum ZoneType {
+  URBANA
+  RURAL
+}
+
+enum LanguageLevel {
+  NATIVE
+  BILINGUAL
+  FLUENT
+  PROFICIENT
+  ADVANCED
+  BEGINNER
+  INTERMEDIATE
+}
+
+enum EmploymentRelationship {
+  EMPLOYEE
+  SELF_EMPLOYED
+  FREELANCER
+  INTERN
+  VOLUNTEER
+  ACADEMIC_APPRENTICESHIP
+  TRAINEE
+  OTHER
+}
+
+enum WorkFormat {
+  HYBRID
+  REMOTE
+  PRESENTIAL
+}
+
+enum CourseType {
+  CHILDHOOD_EDUCATION
+  ELEMENTARY_EDUCATION
+  HIGH_SCHOOL
+  TECHNICIAN
+  TECHNOLOGIST
+  UNDERGRADUATE
+  BACHELORS
+  TEACHING
+  POSTGRADUATE
+  MASTER
+  DOCTORATE
+}
+
+enum CourseStatus {
+  COMPLETED
+  IN_PROGRESS
+  DROPPED
+}
+
+enum CourseModality {
+  PRESENTIAL
+  HYBRID
+  REMOTE
+}
+
+enum CategoryLicense {
+  A
+  B
+  C
+  D
+  E
+  ACC
+  AB
+  AC
+  AD
+  AE
+}

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NASC - Assistente Virtual</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      color: #17252a;
+    }
+
+    .chat-box {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 1rem;
+      height: 400px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+    }
+
+    .user {
+      font-weight: bold;
+      color: #2b7a78;
+    }
+
+    .nai {
+      font-weight: bold;
+      color: #3a3a3a;
+    }
+
+    .menu-button {
+      background-color: #2b7a78;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      margin: 0.25rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.3s;
+    }
+
+    .menu-button:hover {
+      background-color: #1e5c5a;
+    }
+
+    textarea, input, button {
+      font-size: 1rem;
+      padding: 0.7rem;
+      margin-top: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    button {
+      background-color: #3aafa9;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .input-group > * {
+      flex: 1;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .file-upload {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 NASC - Assistente Virtual do SETASC</h1>
+
+    <label for="user_id">User ID:</label>
+    <!-- <input id="user_id" value="dd060639-cb4c-46a2-aac9-764a979b2d50" /> -->
+    <input id="user_id" value="" />
+
+    <label for="session_id">Session ID:</label>
+    <input id="session_id" value="session324" />
+
+    <div class="chat-box" id="chat"></div>
+
+    <label for="mensagem">Sua mensagem:</label>
+    <textarea id="mensagem" rows="3"></textarea>
+
+    <div class="input-group">
+      <button onclick="enviarMensagem()">Enviar</button>
+      <button onclick="document.getElementById('file').click()">📎 Arquivo</button>
+      <button id="recordBtn" onclick="toggleGravacao()">🎙️ Gravar</button>
+    </div>
+
+    <input type="file" id="file" class="hidden" onchange="uploadArquivo()" />
+
+    <audio id="audioPlayer" controls class="hidden"></audio>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    let mediaRecorder, audioChunks = [];
+
+    function adicionarMensagem(tipo, texto) {
+      const div = document.createElement("div");
+      div.classList.add("message");
+      const nome = tipo === "user" ? "Você" : "NAI";
+      let conteudo = tipo === "nai" ? marked.parse(texto) : texto;
+      
+      // Se for mensagem da NAI, procurar por opções do menu para adicionar botões
+      if (tipo === "nai") {
+        conteudo = adicionarBotoesMenu(conteudo);
+      }
+      
+      div.innerHTML = `<span class="${tipo}">${nome}:</span><div>${conteudo}</div>`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function adicionarBotoesMenu(conteudo) {
+      // Padrões de menu que queremos transformar em botões
+      const menuOptions = [
+        { text: "Ver seu currículo", action: "Ver meu currículo" },
+        { text: "Editar seu currículo", action: "Editar meu currículo" },
+        { text: "Buscar vagas mais alinhadas ao seu perfil", action: "Buscar vagas" },
+        { text: "Enviar um currículo (PDF)", action: "Quero enviar um PDF" },
+        { text: "Papo estruturado (perguntas)", action: "Quero responder perguntas" },
+        { text: "Papo livre (texto aberto)", action: "Quero conversar livremente" },
+        { text: "Enviar um áudio", action: "Quero enviar um áudio" },
+        { text: "Enviar um vídeo", action: "Quero enviar um vídeo" }
+      ];
+
+      // Debug - ver o conteúdo original
+      console.log("Conteúdo original:", conteudo);
+
+      // Substituir cada opção encontrada no texto
+      menuOptions.forEach(option => {
+        // Procurar o texto exato da opção, independente de marcadores
+        if (conteudo.includes(option.text)) {
+          const button = `<button class="menu-button" onclick="enviarComando('${option.action}')">${option.text}</button>`;
+          
+          // Substituir diferentes padrões possíveis
+          // Padrão com <li>
+          conteudo = conteudo.replace(new RegExp(`<li>${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</li>`, 'gi'), `<li>${button}</li>`);
+          
+          // Padrão com hífen
+          conteudo = conteudo.replace(new RegExp(`-\\s*${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), `- ${button}`);
+          
+          // Padrão numerado
+          conteudo = conteudo.replace(new RegExp(`(\\d+\\.)\\s*${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), `$1 ${button}`);
+          
+          // Padrão simples (apenas o texto)
+          // Só substituir se estiver em uma linha isolada ou após uma quebra
+          conteudo = conteudo.replace(new RegExp(`(^|\\n|<br>|<p>)${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gim'), `$1${button}`);
+        }
+      });
+
+      // Debug - ver o conteúdo modificado
+      console.log("Conteúdo modificado:", conteudo);
+
+      return conteudo;
+    }
+
+    function enviarComando(comando) {
+      document.getElementById("mensagem").value = comando;
+      enviarMensagem();
+    }
+
+    async function enviarMensagem() {
+      const userId = document.getElementById("user_id").value;
+      const sessionId = document.getElementById("session_id").value;
+      const mensagem = document.getElementById("mensagem").value.trim();
+      if (!mensagem) return;
+
+      console.log("=== ENVIANDO MENSAGEM ===");
+      console.log("User ID:", userId);
+      console.log("Session ID:", sessionId);
+      console.log("Mensagem:", mensagem);
+      console.log("Mensagem length:", mensagem.length);
+      console.log("Mensagem repr:", JSON.stringify(mensagem));
+
+      adicionarMensagem("user", mensagem);
+      document.getElementById("mensagem").value = "";
+
+      const payload = { user_id: userId, session_id: sessionId, message: mensagem };
+      console.log("Payload completo:", JSON.stringify(payload, null, 2));
+      
+      try {
+        const res = await fetch("http://localhost:8080/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        console.log("Response status:", res.status);
+        console.log("Response headers:", res.headers);
+
+        const data = await res.json();
+        console.log("Response data:", data);
+        console.log("Response length:", data.response ? data.response.length : 0);
+        
+        adicionarMensagem("nai", data.response || "Erro na resposta");
+      } catch (error) {
+        console.error("Erro ao enviar mensagem:", error);
+        adicionarMensagem("nai", "Erro ao conectar com o servidor");
+      }
+    }
+
+    async function uploadArquivo() {
+      const fileInput = document.getElementById("file");
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("user_id", document.getElementById("user_id").value);
+      formData.append("session_id", document.getElementById("session_id").value);
+      formData.append("message", ""); // opcional
+
+      adicionarMensagem("user", `📁 Enviando arquivo: ${file.name}`);
+
+      const res = await fetch("http://localhost:8080/run", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      adicionarMensagem("nai", data.response || "Arquivo enviado, mas sem resposta.");
+      fileInput.value = "";
+    }
+
+    async function toggleGravacao() {
+      const recordBtn = document.getElementById("recordBtn");
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        recordBtn.textContent = "🎙️ Gravar";
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Tentar usar MP4 se disponível (para Safari no macOS)
+        const mimeTypes = [
+          'audio/mp4',
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/ogg',
+          'audio/wav'
+        ];
+        
+        let selectedMimeType = 'audio/webm'; // fallback
+        for (const mimeType of mimeTypes) {
+          if (MediaRecorder.isTypeSupported(mimeType)) {
+            selectedMimeType = mimeType;
+            console.log('Usando formato de áudio:', mimeType);
+            break;
+          }
+        }
+        
+        mediaRecorder = new MediaRecorder(stream, { mimeType: selectedMimeType });
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const extension = selectedMimeType.includes('mp4') ? 'mp4' : 
+                           selectedMimeType.includes('ogg') ? 'ogg' :
+                           selectedMimeType.includes('wav') ? 'wav' : 'webm';
+          
+          const audioBlob = new Blob(audioChunks, { type: selectedMimeType });
+          const formData = new FormData();
+          formData.append("file", audioBlob, `audio.${extension}`);
+          formData.append("user_id", document.getElementById("user_id").value);
+          formData.append("session_id", document.getElementById("session_id").value);
+          formData.append("message", ""); // opcional
+
+          adicionarMensagem("user", `🎤 Enviando áudio gravado (${selectedMimeType})...`);
+
+          const res = await fetch("http://localhost:8080/run", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await res.json();
+          adicionarMensagem("nai", data.response || "Áudio enviado, mas sem resposta.");
+
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const player = document.getElementById("audioPlayer");
+          player.src = audioUrl;
+          player.classList.remove("hidden");
+        };
+
+        mediaRecorder.start();
+        recordBtn.textContent = "⏹️ Parar";
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>
