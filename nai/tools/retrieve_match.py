@@ -68,12 +68,23 @@ def retrieve_match(_: str, tool_context: ToolContext) -> dict:
                     })
                 
                 logger.info(f"Busca melhorada retornou {len(matches)} matches para user {user_id}")
-                return {
+                
+                # Verifica score ATS do perfil
+                result = {
                     "status": "success",
                     "matches": matches,
                     "user_profile": data.get("user_profile", {}),
                     "search_terms_used": data.get("search_terms_used", [])
                 }
+                
+                # Adiciona aviso ATS se o score for baixo
+                if tool_context and tool_context.state:
+                    perfil = tool_context.state.get("perfil_profissional", {})
+                    ats_score = perfil.get("atsScore", 0)
+                    if ats_score > 0 and ats_score < 70:
+                        result["ats_warning"] = f"⚠️ Atenção: Seu currículo tem score ATS de {ats_score}%. Recomendo otimizá-lo antes de se candidatar. Digite 'verificar ATS' para análise detalhada."
+                
+                return result
             else:
                 # API antiga já retorna no formato correto
                 return {

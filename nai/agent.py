@@ -12,6 +12,7 @@ from .tools import (
     update_state_tool,
     retrieve_vacancy_tool,
     retrieve_match_tool,
+    analyze_ats_score_tool,
 )
 
 load_dotenv()
@@ -29,7 +30,8 @@ root_agent = LlmAgent(
         save_user_profile_tool,
         update_state_tool,
         retrieve_vacancy_tool,
-        retrieve_match_tool
+        retrieve_match_tool,
+        analyze_ats_score_tool
     ],
     include_contents="default"
 )

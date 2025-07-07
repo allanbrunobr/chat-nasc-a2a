@@ -108,11 +108,12 @@ The A2A implementation follows a wrapper pattern:
 
 - `retrieve_user_info`: Fetches user profile from backend
 - `save_user_profile`: Persists profile changes
-- `update_state`: Manages conversation state in PostgreSQL
-- `retrieve_match`: Finds career/job matches based on profile
+- `update_state`: Manages conversation state in PostgreSQL (now with ATS optimization)
+- `retrieve_match`: Finds career/job matches based on profile (includes ATS warnings)
 - `retrieve_gap`: Identifies skill gaps for career transitions
 - `retrieve_courses`: Searches relevant training courses
 - `retrieve_vacancy`: Searches job opportunities
+- `analyze_ats_score`: Analyzes resume ATS compatibility (NEW)
 
 ### Session Management
 
@@ -138,6 +139,10 @@ The agent follows structured flows defined in `prompt.py`:
 3. Career/job matching based on complete profile
 4. Gap analysis for career transitions
 5. Course recommendations to address gaps
+6. ATS optimization flow (NEW):
+   - Check ATS compatibility score
+   - Provide detailed analysis and suggestions
+   - Optimize profile for better ATS performance
 
 ### Environment Configuration
 
@@ -163,6 +168,41 @@ Currently uses manual testing via `test/front/index.html`. No automated test sui
 - Phoenix observability is optional and controlled by `PHOENIX_ENABLED` environment variable
 - Production deployments should use `requirements.txt` (without Phoenix dependencies)
 - Development environments can use `requirements-dev.txt` for full observability
+
+### ATS Optimization Features (NEW)
+
+The system now includes comprehensive ATS (Applicant Tracking System) optimization:
+
+#### Commands:
+- `verificar ATS` / `analisar compatibilidade ATS` / `score ATS` - Analyzes profile ATS compatibility
+- `otimizar currículo` / `melhorar para ATS` - Applies automatic optimizations
+- `otimizar para vaga [ID]` - Optimizes profile for specific job posting
+
+#### ATS Score Components (0-100):
+- Contact Information: 10 points
+- Professional Summary: 15 points  
+- Work Experience: 25 points (action verbs, achievements, keywords)
+- Education: 10 points
+- Skills: 15 points (technical and soft skills balance)
+- Formatting: 15 points (date formats, no problematic terms)
+- Keywords: 10 points
+
+#### Profile Enhancements:
+- New fields: `professionalSummary`, `coreCompetencies`, `achievements`, `keywords`
+- Experience fields: `achievements[]`, `technologies[]`, `keywords[]`
+- Metadata: `atsScore`, `atsOptimized`, `lastATSCheck`, `optimizationSuggestions[]`
+
+#### Best Practices:
+- Start experience descriptions with action verbs
+- Quantify achievements (increased sales by 30%, reduced costs by $50k)
+- Use full terms instead of abbreviations (JavaScript not JS)
+- Maintain 2-3% keyword density
+- Use standard section titles recognized by ATS
+
+#### Integration:
+- `retrieve_match` shows ATS warnings if score < 70%
+- `update_state` applies ATS formatting rules automatically
+- Keywords database at `nai/data/ats_keywords.json` with industry-specific terms
 
 ## Memories
 
