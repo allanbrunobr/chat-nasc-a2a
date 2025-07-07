@@ -124,7 +124,7 @@ if __name__ == "__main__":
     import uvicorn
     
     # Get port from environment or use default
-    port = int(os.getenv("A2A_PORT", "8081"))
+    port = int(os.getenv("A2A_PORT", "8082"))
     
     logger.info(f"Starting NAI A2A server on port {port}")
     logger.info(f"Agent card available at: http://localhost:{port}/.well-known/agent.json")
