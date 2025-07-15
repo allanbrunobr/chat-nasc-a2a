@@ -11,3 +11,9 @@ test/test_retrieve_user_info.py
 .DS_Store
 docs/.DS_Store
 nai-setasc-credentials.json
+
+# NASC-E specific
+nasc-empresa/.env
+nasc-empresa/venv/
+nasc-empresa/__pycache__/
+nasc-empresa/*.pyc

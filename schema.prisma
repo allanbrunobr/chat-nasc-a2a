@@ -24,16 +24,34 @@ model User {
   corporateEmail         String?                 @unique
   personalCompanyId      String?                 @unique
   recruitingForCompanyId String?
+  isMaster               Boolean                 @default(false)
+  companyAdminId         String?                 @unique
+  responsibleForCompany  Company?                @relation("Company_userResponsibleForVacancyToUser")
   jobVacancyResponsibles JobVacancyResponsible[]
   MatchingCurriculo      MatchingCurriculo[]
+  companyAdmin           Company?                @relation("CompanyAdmin", fields: [companyAdminId], references: [id])
   company                Company?                @relation("CompanyOwner", fields: [companyId], references: [id])
   personalCompany        Company?                @relation("User_personalCompanyIdToCompany", fields: [personalCompanyId], references: [id])
   recruitingForCompany   Company?                @relation("CompanyRecruiters", fields: [recruitingForCompanyId], references: [id])
-  responsibleForCompany  Company?                @relation("Company_userResponsibleForVacancyToUser")
   cv                     UserCV?
   complement             UserComplement?
+  userEmails             UserEmail[]
   userEmbeddings         UserEmbeddings?
   userSessions           UserSession[]
+}
+
+model UserEmail {
+  id        String    @id @default(uuid())
+  email     String
+  type      EmailType
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([email, userId])
+  @@index([email])
+  @@index([userId])
 }
 
 model Position {
@@ -77,6 +95,7 @@ model UserCV {
   millitaryCertificate    Boolean?
   positionId              Int?
   userCVWishPositionsId   String?
+  isActive                Boolean                    @default(true)
   CvCourse                CvAditionalCourse[]
   CvCertification         CvCertification[]
   CvEducation             CvEducation[]
@@ -256,7 +275,6 @@ model Company {
   id                        String              @id @default(uuid())
   companyName               String
   businessName              String?
-  documentNumber            String?
   active                    Boolean             @default(true)
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime?
@@ -281,13 +299,15 @@ model Company {
   district                  String?
   number                    String?
   userResponsibleForVacancy String?             @unique
+  documentNumber            String?
+  responsibleUser           User?               @relation("Company_userResponsibleForVacancyToUser", fields: [userResponsibleForVacancy], references: [id])
   jobVacancies              JobVacancy[]
   matchingCurriculos        MatchingCurriculo[]
   recruiters                Recruiter[]
+  adminUser                 User?               @relation("CompanyAdmin")
   user                      User?               @relation("CompanyOwner")
   personalUsers             User?               @relation("User_personalCompanyIdToCompany")
   recruiterUsers            User[]              @relation("CompanyRecruiters")
-  responsibleUser           User?               @relation("Company_userResponsibleForVacancyToUser", fields: [userResponsibleForVacancy], references: [id])
   vacancyEmbeddings         VacancyEmbeddings[]
 }
 
@@ -541,6 +561,20 @@ model user_states {
   @@id([app_name, user_id])
 }
 
+model a2a_tasks {
+  task_id    String    @id @db.VarChar(255)
+  state      String    @db.VarChar(50)
+  request    Json
+  metadata   Json?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  result     Json?
+  error      String?
+
+  @@index([created_at], map: "idx_a2a_tasks_created")
+  @@index([state], map: "idx_a2a_tasks_state")
+}
+
 enum UserRole {
   ADMIN
   USER
@@ -647,17 +681,8 @@ enum CategoryLicense {
   AE
 }
 
-model A2aTasks {
-  taskId    String   @id @map("task_id")
-  state     String   @db.VarChar(50)
-  request   Json     @db.JsonB
-  metadata  Json?    @db.JsonB
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-  result    Json?    @db.JsonB
-  error     String?  @db.Text
-
-  @@index([state])
-  @@index([createdAt])
-  @@map("a2a_tasks")
+enum EmailType {
+  PERSONAL
+  PROFESSIONAL
+  ADMIN
 }

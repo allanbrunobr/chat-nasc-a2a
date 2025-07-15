@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NASC-E - Assistente Empresarial</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      color: #17252a;
+    }
+
+
+    .chat-box {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 1rem;
+      height: 400px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+    }
+
+    .user {
+      font-weight: bold;
+      color: #1565c0;
+    }
+
+    .nasce {
+      font-weight: bold;
+      color: #2e7d32;
+    }
+
+    .menu-button {
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      margin: 0.25rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.3s;
+    }
+
+    .menu-button:hover {
+      background-color: #1b5e20;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-actions button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .quick-actions button:hover {
+      background-color: #0d47a1;
+    }
+
+    textarea, input, button {
+      font-size: 1rem;
+      padding: 0.7rem;
+      margin-top: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    button {
+      background-color: #2e7d32;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .input-group > * {
+      flex: 1;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💼 NASC-E - Assistente Empresarial do SETASC</h1>
+
+    <label for="user_id">Company User ID:</label>
+    <input id="user_id" value="" placeholder="ID do usuário empresa" />
+
+    <label for="session_id">Session ID:</label>
+    <input id="session_id" value="empresa_session_001" />
+
+    <!-- Ações Rápidas -->
+    <div class="quick-actions">
+      <button onclick="enviarComando('Listar minhas vagas')">📋 Minhas Vagas</button>
+      <button onclick="enviarComando('Criar nova vaga')">➕ Nova Vaga</button>
+      <button onclick="enviarComando('Ver candidatos aplicados')">👥 Candidatos</button>
+      <button onclick="enviarComando('Buscar talentos')">🔍 Buscar Talentos</button>
+    </div>
+
+    <div class="chat-box" id="chat"></div>
+
+    <label for="mensagem">Sua mensagem:</label>
+    <textarea id="mensagem" rows="3" placeholder="Digite sua mensagem ou escolha uma ação rápida acima..."></textarea>
+
+    <div class="input-group">
+      <button onclick="enviarMensagem()">Enviar</button>
+      <button onclick="limparChat()">🗑️ Limpar</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://localhost:8081"; // Porta do NASC-E
+    const chat = document.getElementById("chat");
+
+    function adicionarMensagem(tipo, texto) {
+      const div = document.createElement("div");
+      div.classList.add("message");
+      const nome = tipo === "user" ? "Você" : "NASC-E";
+      let conteudo = tipo === "nasce" ? marked.parse(texto) : texto;
+      
+      // Adicionar botões de menu se for mensagem da NASC-E
+      if (tipo === "nasce") {
+        conteudo = adicionarBotoesMenu(conteudo);
+      }
+      
+      div.innerHTML = `<span class="${tipo}">${nome}:</span><div>${conteudo}</div>`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function adicionarBotoesMenu(conteudo) {
+      // Opções de menu empresarial
+      const menuOptions = [
+        { text: "Criar nova vaga", action: "Criar nova vaga" },
+        { text: "Listar minhas vagas", action: "Listar minhas vagas" },
+        { text: "Ver candidatos aplicados", action: "Ver candidatos aplicados" },
+        { text: "Buscar candidatos compatíveis", action: "Buscar candidatos para minha vaga" },
+        { text: "Editar vaga", action: "Editar vaga" },
+        { text: "Ativar/desativar vaga", action: "Alterar status da vaga" }
+      ];
+
+      menuOptions.forEach(option => {
+        if (conteudo.includes(option.text)) {
+          const button = `<button class="menu-button" onclick="enviarComando('${option.action}')">${option.text}</button>`;
+          
+          // Substituir diferentes padrões
+          conteudo = conteudo.replace(new RegExp(`<li>${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</li>`, 'gi'), `<li>${button}</li>`);
+          conteudo = conteudo.replace(new RegExp(`-\\s*${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), `- ${button}`);
+          conteudo = conteudo.replace(new RegExp(`(\\d+\\.)\\s*${option.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), `$1 ${button}`);
+        }
+      });
+
+      return conteudo;
+    }
+
+    function enviarComando(comando) {
+      document.getElementById("mensagem").value = comando;
+      enviarMensagem();
+    }
+
+    async function enviarMensagem() {
+      const userId = document.getElementById("user_id").value;
+      const sessionId = document.getElementById("session_id").value;
+      const mensagem = document.getElementById("mensagem").value.trim();
+      
+      if (!mensagem) return;
+      if (!userId) {
+        adicionarMensagem("nasce", "Por favor, preencha o Company User ID.");
+        return;
+      }
+
+      console.log("=== ENVIANDO MENSAGEM EMPRESARIAL ===");
+      console.log("Company User ID:", userId);
+      console.log("Session ID:", sessionId);
+      console.log("Mensagem:", mensagem);
+
+      adicionarMensagem("user", mensagem);
+      document.getElementById("mensagem").value = "";
+
+      const payload = { 
+        user_id: userId, 
+        session_id: sessionId, 
+        message: mensagem 
+      };
+      
+      console.log("Payload completo:", JSON.stringify(payload, null, 2));
+      
+      try {
+        const res = await fetch(`${API_URL}/run`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        console.log("Response status:", res.status);
+        
+        if (!res.ok) {
+          const error = await res.json();
+          console.error("Erro na resposta:", error);
+          adicionarMensagem("nasce", `Erro ${res.status}: ${error.detail || "Erro desconhecido"}`);
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Response data:", data);
+        
+        adicionarMensagem("nasce", data.response || "Erro na resposta");
+        
+        // Atualizar session_id se mudou
+        if (data.session_id) {
+          document.getElementById("session_id").value = data.session_id;
+        }
+        
+      } catch (error) {
+        console.error("Erro ao enviar mensagem:", error);
+        adicionarMensagem("nasce", "Erro ao conectar com o servidor. Verifique se o NASC-E está rodando na porta 8081.");
+      }
+    }
+
+    function limparChat() {
+      chat.innerHTML = "";
+      adicionarMensagem("nasce", "Chat limpo. Como posso ajudar sua empresa?");
+    }
+
+    // Permitir enviar com Enter
+    document.getElementById("mensagem").addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        enviarMensagem();
+      }
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>

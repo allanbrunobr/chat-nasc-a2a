@@ -25,17 +25,28 @@ if PHOENIX_ENABLED:
         logging.warning("Phoenix dependencies not installed. Running without observability.")
 
 # Configurar logging com mais detalhes
+log_level = os.getenv('LOG_LEVEL', 'DEBUG').upper()
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=getattr(logging, log_level, logging.DEBUG),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# Reduzir verbosidade do Google ADK
-logging.getLogger("google_adk.google.adk.models.google_llm").setLevel(logging.WARNING)
-logging.getLogger("google_adk").setLevel(logging.WARNING)
-logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+# Configurar verbosidade dos loggers
+verbose_mode = os.getenv('VERBOSE_LOGS', 'false').lower() == 'true'
+
+if verbose_mode:
+    # Modo verbose - mostra todos os logs
+    logging.getLogger("google_adk").setLevel(logging.DEBUG)
+    logging.getLogger("nai").setLevel(logging.DEBUG)
+    logging.getLogger("urllib3").setLevel(logging.DEBUG)
+    logger.info("🔍 Modo VERBOSE ativado - todos os logs serão exibidos")
+else:
+    # Modo normal - reduz verbosidade
+    logging.getLogger("google_adk.google.adk.models.google_llm").setLevel(logging.WARNING)
+    logging.getLogger("google_adk").setLevel(logging.WARNING)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
 # Reduzir verbosidade do OpenTelemetry apenas se Phoenix estiver habilitado
 if PHOENIX_ENABLED:
@@ -70,6 +81,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware para log de requisições (apenas em modo verbose)
+if verbose_mode:
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        import time
+        start_time = time.time()
+        
+        # Log da requisição
+        logger.info(f"📥 Request: {request.method} {request.url}")
+        logger.debug(f"   Headers: {dict(request.headers)}")
+        
+        # Processa a requisição
+        response = await call_next(request)
+        
+        # Log da resposta
+        process_time = time.time() - start_time
+        logger.info(f"📤 Response: {response.status_code} - {process_time:.3f}s")
+        
+        return response
 
 db_user = os.getenv("DB_USER")
 db_pass = os.getenv("DB_PASSWORD")

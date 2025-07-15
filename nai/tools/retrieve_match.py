@@ -49,7 +49,7 @@ def retrieve_match(_: str, tool_context: ToolContext) -> dict:
             resp = requests.get(
                 RETRIEVE_MATCH_URL, 
                 params={"userId": user_id},
-                timeout=10
+                timeout=30
             )
         if resp.status_code == 200:
             data = resp.json()

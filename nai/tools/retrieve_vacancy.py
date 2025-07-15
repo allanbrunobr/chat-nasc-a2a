@@ -21,7 +21,7 @@ def retrieve_vacancy(term: str, tool_context: ToolContext) -> dict:
     headers = {"accept": "application/json"}
     params = {"text": term}
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response = requests.get(url, params=params, headers=headers, timeout=30)
         if response.status_code == 200:
             return {"status": "success", "vagas": response.json().get("message", [])}
         else:

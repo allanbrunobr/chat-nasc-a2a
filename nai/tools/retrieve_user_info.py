@@ -60,7 +60,7 @@ def retrieve_user_info(tool_context: ToolContext) -> dict:
 
     try:
         logger.debug("Fazendo requisição GET...")
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=30)
         logger.debug(f"Status code: {response.status_code}")
         if response.status_code == 200:
             data = response.json()
