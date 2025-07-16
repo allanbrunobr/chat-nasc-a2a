@@ -20,7 +20,8 @@ from .tools import (
     retrieve_company_info_tool,
     manage_vacancy_tool,
     retrieve_matches_tool,
-    retrieve_applicants_tool
+    retrieve_applicants_tool,
+    update_state_tool
 )
 
 # Verificar API key
@@ -40,7 +41,8 @@ empresa_agent = LlmAgent(
         retrieve_company_info_tool,
         manage_vacancy_tool,
         retrieve_matches_tool,
-        retrieve_applicants_tool
+        retrieve_applicants_tool,
+        update_state_tool
     ],
     include_contents="default"
 )

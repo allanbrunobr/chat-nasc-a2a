@@ -93,20 +93,68 @@ async def chat(request: ChatRequest):
         # Criar conteúdo da mensagem
         user_content = Content(parts=[Part(text=request.message)])
         
-        # Executar agente
         response_text = ""
         session_id = request.session_id or f"{request.user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+        # Garante que a sessão existe antes de rodar o runner
+        try:
+            session_service.get_session(session_id)
+        except Exception:
+            logger.info(f"Criando nova sessão no banco para session_id: {session_id}")
+            await session_service.create_session(session_id=session_id, user_id=request.user_id, app_name="NASC-E")
         
-        async for event in runner.run_async(
-            session_id=session_id,
-            user_id=request.user_id,
-            new_message=user_content
-        ):
-            # Processar eventos do agente
-            if event.content and event.content.parts:
-                for part in event.content.parts:
-                    if part.text:
-                        response_text += part.text
+        try:
+            async for event in runner.run_async(
+                session_id=session_id,
+                user_id=request.user_id,
+                new_message=user_content
+            ):
+                # Processar eventos do agente
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        if part.text:
+                            response_text += part.text
+        except Exception as e:
+            # Tratamento especial para erro de sessão não encontrada
+            if "Session not found" in str(e):
+                logger.warning(f"Sessão não encontrada: {session_id}. Criando nova sessão.")
+                # Cria nova sessão e tenta novamente
+                session_id = f"{request.user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                response_text = ""
+                try:
+                    await session_service.create_session(session_id=session_id, user_id=request.user_id, app_name="NASC-E")
+                except Exception as e_create:
+                    logger.error(f"Erro ao criar nova sessão no banco: {str(e_create)}")
+                    return ChatResponse(
+                        response=f"Erro ao criar nova sessão: {str(e_create)}",
+                        session_id=session_id
+                    )
+                try:
+                    async for event in runner.run_async(
+                        session_id=session_id,
+                        user_id=request.user_id,
+                        new_message=user_content
+                    ):
+                        if event.content and event.content.parts:
+                            for part in event.content.parts:
+                                if part.text:
+                                    response_text += part.text
+                except Exception as e2:
+                    logger.error(f"Erro ao processar mensagem após recriar sessão: {str(e2)}")
+                    return ChatResponse(
+                        response=f"Erro ao processar mensagem após recriar sessão: {str(e2)}",
+                        session_id=session_id
+                    )
+                return ChatResponse(
+                    response="Sua sessão anterior expirou ou não foi encontrada. Iniciando uma nova sessão.\n" + response_text,
+                    session_id=session_id
+                )
+            else:
+                logger.error(f"Erro ao processar mensagem: {str(e)}")
+                return ChatResponse(
+                    response=f"Erro ao processar mensagem: {str(e)}",
+                    session_id=request.session_id or "error"
+                )
         
         logger.info(f"Resposta enviada: {response_text[:100]}...")
         
@@ -116,9 +164,9 @@ async def chat(request: ChatRequest):
         )
         
     except Exception as e:
-        logger.error(f"Erro ao processar mensagem: {str(e)}")
+        logger.error(f"Erro inesperado ao processar mensagem: {str(e)}")
         return ChatResponse(
-            response=f"Erro ao processar mensagem: {str(e)}",
+            response=f"Erro inesperado ao processar mensagem: {str(e)}",
             session_id=request.session_id or "error"
         )
 
