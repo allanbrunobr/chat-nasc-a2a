@@ -259,15 +259,4 @@ def _get_vacancy(base_url: str, headers: dict, vacancy_id: int) -> dict:
 
 
 # Registrar a ferramenta
-manage_vacancy_tool = FunctionTool(
-    func=manage_vacancy,
-    name="manage_vacancy",
-    description="""Gerencia vagas de emprego. 
-    Ações disponíveis:
-    - create: Criar nova vaga (requer vacancy_data)
-    - update: Atualizar vaga existente (requer vacancy_id e vacancy_data)
-    - toggle: Ativar/desativar vaga (requer vacancy_id)
-    - list: Listar todas as vagas da empresa
-    - get: Obter detalhes de uma vaga (requer vacancy_id)
-    """
-)
+manage_vacancy_tool = FunctionTool(manage_vacancy)

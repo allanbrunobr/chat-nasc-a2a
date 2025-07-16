@@ -94,8 +94,4 @@ def retrieve_company_info(tool_context: ToolContext) -> dict:
         }
 
 # Registrar a ferramenta
-retrieve_company_info_tool = FunctionTool(
-    func=retrieve_company_info,
-    name="retrieve_company_info",
-    description="Recupera informações da empresa do usuário. Deve ser sempre executada no início da conversa."
-)
+retrieve_company_info_tool = FunctionTool(retrieve_company_info)

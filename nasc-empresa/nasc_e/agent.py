@@ -32,7 +32,7 @@ logger.debug("Inicializando agente NASC-E (Empresarial) com modelo gemini-2.0-fl
 
 # Criar agente empresarial
 empresa_agent = LlmAgent(
-    name="NASC-E",
+    name="NASC_E",
     model="gemini-2.0-flash",
     description="Assistente empresarial do SETASC para gestão de vagas e recrutamento",
     instruction=EMPRESA_AGENT_INSTR,

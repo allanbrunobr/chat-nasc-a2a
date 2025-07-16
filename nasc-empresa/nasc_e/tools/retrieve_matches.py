@@ -235,21 +235,4 @@ def search_candidates_by_skills(
 
 
 # Registrar a ferramenta principal
-retrieve_matches_tool = FunctionTool(
-    func=retrieve_matches,
-    name="retrieve_matches",
-    description="""Busca candidatos compatíveis com uma vaga específica.
-    Retorna lista ordenada por score de compatibilidade, incluindo:
-    - Informações do candidato
-    - Score de match (0-100%)
-    - Score ATS
-    - Razões da compatibilidade
-    - Disponibilidade
-    
-    Parâmetros:
-    - vacancy_id: ID da vaga (obrigatório)
-    - min_score: Score mínimo de compatibilidade (padrão: 70)
-    - limit: Número máximo de resultados (padrão: 20)
-    - filters: Filtros adicionais (location, skills, experience)
-    """
-)
+retrieve_matches_tool = FunctionTool(retrieve_matches)

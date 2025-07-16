@@ -313,22 +313,4 @@ def _get_applicant_details(base_url: str, headers: dict, applicant_id: str) -> d
 
 
 # Registrar a ferramenta
-retrieve_applicants_tool = FunctionTool(
-    func=retrieve_applicants,
-    name="retrieve_applicants",
-    description="""Gerencia candidatos que se aplicaram às vagas da empresa.
-    
-    Ações disponíveis:
-    - list: Listar candidatos aplicados (com filtros opcionais)
-    - update_status: Atualizar status do candidato
-    - add_feedback: Adicionar feedback/observações
-    - get_details: Obter perfil completo do candidato
-    
-    Status válidos: novo, em_analise, entrevista, aprovado, rejeitado
-    
-    Filtros para listagem:
-    - vacancy_id: Filtrar por vaga específica
-    - status_filter: Filtrar por status
-    - date_from/date_to: Filtrar por período de aplicação
-    """
-)
+retrieve_applicants_tool = FunctionTool(retrieve_applicants)

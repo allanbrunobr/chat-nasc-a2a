@@ -34,9 +34,6 @@ def main():
     if not os.getenv("GOOGLE_API_KEY"):
         print("❌ ERRO: GOOGLE_API_KEY não configurada no .env")
         sys.exit(1)
-        
-    if not os.getenv("JWT_SECRET"):
-        print("⚠️  AVISO: JWT_SECRET não configurada - usando valor padrão (não recomendado para produção)")
     
     # Iniciar servidor
     try:

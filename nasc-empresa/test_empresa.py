@@ -11,8 +11,7 @@ from datetime import datetime
 # Configurações
 BASE_URL = "http://localhost:8081"
 HEADERS = {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"  # Substituir pelo token real
+    "Content-Type": "application/json"
 }
 
 def print_header(text):
@@ -68,37 +67,6 @@ def test_chat(message, session_id=None):
         print(f"❌ Erro: {e}")
         return None
 
-def test_create_vacancy():
-    """Testar criação direta de vaga"""
-    print_header("Teste: Criar Vaga Diretamente")
-    
-    vacancy_data = {
-        "title": "Desenvolvedor Full Stack",
-        "position": "Desenvolvedor",
-        "description": "Procuramos desenvolvedor Full Stack com experiência em React e Node.js",
-        "location": "Cuiabá/MT",
-        "requirements": "3+ anos de experiência, React, Node.js, PostgreSQL",
-        "benefits": "VR, VA, Plano de Saúde, Home Office",
-        "salary_range": "R$ 6.000 - R$ 10.000",
-        "work_format": "HYBRID",
-        "contract_type": "CLT",
-        "vacancies": 2
-    }
-    
-    try:
-        response = requests.post(
-            f"{BASE_URL}/vacancy/create",
-            headers=HEADERS,
-            json=vacancy_data
-        )
-        
-        print(f"Status: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)}")
-        return response.status_code == 200
-        
-    except Exception as e:
-        print(f"❌ Erro: {e}")
-        return False
 
 def run_conversation_tests():
     """Executar testes de conversação"""
@@ -146,8 +114,7 @@ def main():
         print("\n" + "-"*40)
         print("Escolha uma opção:")
         print("1. Testar conversação completa")
-        print("2. Testar criação direta de vaga")
-        print("3. Testar mensagem específica")
+        print("2. Testar mensagem específica")
         print("0. Sair")
         
         choice = input("\nOpção: ").strip()
@@ -155,8 +122,6 @@ def main():
         if choice == "1":
             run_conversation_tests()
         elif choice == "2":
-            test_create_vacancy()
-        elif choice == "3":
             message = input("Digite a mensagem: ")
             test_chat(message)
         elif choice == "0":
