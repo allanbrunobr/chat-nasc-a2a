@@ -98,10 +98,20 @@ async def chat(request: ChatRequest):
 
         # Garante que a sessão existe antes de rodar o runner
         try:
-            session_service.get_session(session_id)
-        except Exception:
-            logger.info(f"Criando nova sessão no banco para session_id: {session_id}")
-            await session_service.create_session(session_id=session_id, user_id=request.user_id, app_name="NASC-E")
+            existing_session = session_service.get_session(session_id)
+            logger.info(f"Usando sessão existente: {session_id}")
+        except Exception as e:
+            logger.info(f"Sessão não encontrada ({str(e)}). Criando nova sessão: {session_id}")
+            try:
+                await session_service.create_session(session_id=session_id, user_id=request.user_id, app_name="NASC-E")
+                logger.info(f"Nova sessão criada com sucesso: {session_id}")
+            except Exception as create_error:
+                if "duplicate key" in str(create_error):
+                    logger.warning(f"Sessão já existe (race condition): {session_id}")
+                    # Se já existe, continuar normalmente
+                else:
+                    logger.error(f"Erro ao criar sessão: {str(create_error)}")
+                    raise
         
         try:
             async for event in runner.run_async(
@@ -122,13 +132,21 @@ async def chat(request: ChatRequest):
                 session_id = f"{request.user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 response_text = ""
                 try:
-                    await session_service.create_session(session_id=session_id, user_id=request.user_id, app_name="NASC-E")
-                except Exception as e_create:
-                    logger.error(f"Erro ao criar nova sessão no banco: {str(e_create)}")
-                    return ChatResponse(
-                        response=f"Erro ao criar nova sessão: {str(e_create)}",
-                        session_id=session_id
+                    await session_service.create_session(
+                        session_id=session_id, 
+                        user_id=request.user_id, 
+                        app_name="NASC-E",
                     )
+                    logger.info(f"Nova sessão criada após erro: {session_id}")
+                except Exception as e_create:
+                    if "duplicate key" in str(e_create):
+                        logger.warning(f"Sessão já existe, continuando: {session_id}")
+                    else:
+                        logger.error(f"Erro ao criar nova sessão no banco: {str(e_create)}")
+                        return ChatResponse(
+                            response=f"Erro ao criar nova sessão: {str(e_create)}",
+                            session_id=session_id
+                        )
                 try:
                     async for event in runner.run_async(
                         session_id=session_id,

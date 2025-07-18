@@ -9,7 +9,11 @@ from google.adk.tools import FunctionTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
+# Definir nível de log para DEBUG temporariamente
+logger.setLevel(logging.DEBUG)
+
 def retrieve_company_info(tool_context: ToolContext) -> dict:
+    logger.info("==================== INICIANDO retrieve_company_info ====================")
     """
     Recupera informações da empresa do usuário atual.
     
@@ -22,12 +26,46 @@ def retrieve_company_info(tool_context: ToolContext) -> dict:
         dict: Informações da empresa ou erro
     """
     try:
+        # Debug do contexto
+        logger.debug(f"tool_context type: {type(tool_context)}")
+        logger.debug(f"Has _invocation_context: {hasattr(tool_context, '_invocation_context')}")
+        
+        if hasattr(tool_context, '_invocation_context'):
+            logger.debug(f"_invocation_context type: {type(tool_context._invocation_context)}")
+            logger.debug(f"Has session: {hasattr(tool_context._invocation_context, 'session')}")
+            
+            if hasattr(tool_context._invocation_context, 'session'):
+                session = tool_context._invocation_context.session
+                logger.debug(f"session type: {type(session)}")
+                logger.debug(f"session attributes: {dir(session)}")
+                logger.debug(f"Has user_id: {hasattr(session, 'user_id')}")
+        
         # Obter user_id da sessão
         user_id = tool_context._invocation_context.session.user_id
         logger.info(f"Recuperando informações da empresa para user_id: {user_id}")
         
-        # URL da API
-        url = os.getenv("COMPANY_API_URL", "http://localhost:3030/api/companies")
+        # Log detalhado do contexto
+        logger.debug(f"Session metadata: {getattr(tool_context._invocation_context.session, 'metadata', {})}")  
+        logger.debug(f"Tool context state: {tool_context.state}")
+        
+        # Nota: Sempre usaremos user_id para buscar a empresa
+        # A cloud function fará o lookup correto baseado no user_id
+        
+        # URL da Cloud Function para dados completos da empresa
+        cloud_function_url = os.getenv("EMPRESA_PROFILE_GET_INFO")
+        logger.info(f"Cloud function URL: {cloud_function_url}")
+        
+        if cloud_function_url:
+            # SEMPRE usar user_id com a Cloud Function
+            # A cloud function fará o lookup do company_id correto
+            logger.info(f"Usando Cloud Function com user_id: {user_id}")
+            params = {"user_id": user_id}
+            url = cloud_function_url
+        else:
+            # Fallback para API tradicional
+            logger.info("Cloud Function não configurada, usando API tradicional")
+            url = os.getenv("COMPANY_API_URL", "http://localhost:3030/api/companies")
+            params = None
         
         # Headers incluindo o user_id para autenticação
         headers = {
@@ -36,11 +74,59 @@ def retrieve_company_info(tool_context: ToolContext) -> dict:
         }
         
         # Fazer requisição
-        response = requests.get(f"{url}/my-company", headers=headers, timeout=30)
+        if params:
+            # Cloud Function - passar parameters como query param
+            logger.info(f"Fazendo requisição GET para: {url}")
+            logger.info(f"Parâmetros: {params}")
+            logger.info(f"Headers: {headers}")
+            response = requests.get(url, params=params, headers=headers, timeout=30)
+            logger.info(f"Response status: {response.status_code}")
+            logger.debug(f"Response headers: {dict(response.headers)}")
+            if response.status_code != 200:
+                logger.error(f"Response body: {response.text}")
+        else:
+            # API tradicional - endpoint my-company
+            response = requests.get(f"{url}/my-company", headers=headers, timeout=30)
         
         if response.status_code == 200:
-            company_data = response.json()
-            logger.info(f"Empresa encontrada: {company_data.get('companyName', 'N/A')}")
+            data = response.json()
+            logger.info(f"Resposta recebida com sucesso. Keys: {list(data.keys())[:10]}")
+            
+            # Verificar se é resposta da Cloud Function ou API tradicional
+            if "company_name" in data:
+                # Resposta da Cloud Function - já vem formatada
+                logger.info(f"Empresa encontrada (Cloud Function): {data.get('company_name', 'N/A')}")
+                
+                # Extrair dados principais
+                company_data = {
+                    "id": data.get("company_id"),
+                    "companyName": data.get("company_name"),
+                    "businessName": data.get("business_name"),
+                    "documentNumber": data.get("document_number"),
+                    "phoneNumber": data.get("contact", {}).get("phone"),
+                    "email": data.get("contact", {}).get("email"),
+                    "city": data.get("location", {}).get("city"),
+                    "state": data.get("location", {}).get("state"),
+                    "address": data.get("location", {}).get("address"),
+                    "companySize": data.get("company_info", {}).get("size"),
+                    "companyType": data.get("company_info", {}).get("type"),
+                    "nature": data.get("company_info", {}).get("nature"),
+                    "companyDescription": data.get("company_info", {}).get("description"),
+                    "active": data.get("company_info", {}).get("active", True)
+                }
+                
+                # Incluir dados enriquecidos se disponíveis
+                if "ai_analysis" in data:
+                    company_data["ai_analysis"] = data["ai_analysis"]
+                if "summary" in data:
+                    company_data["metrics"] = data["summary"]
+                if "job_vacancies" in data:
+                    company_data["recent_vacancies"] = data["job_vacancies"][:5]
+                    
+            else:
+                # Resposta da API tradicional
+                company_data = data
+                logger.info(f"Empresa encontrada (API tradicional): {company_data.get('companyName', 'N/A')}")
             
             # Salvar no estado para uso posterior
             tool_context.state["company_info"] = company_data
@@ -85,11 +171,22 @@ def retrieve_company_info(tool_context: ToolContext) -> dict:
             "error_code": "TIMEOUT"
         }
         
-    except Exception as e:
-        logger.error(f"Erro inesperado: {str(e)}")
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Erro de conexão: {str(e)}")
         return {
             "status": "error",
-            "message": "Erro ao processar sua solicitação",
+            "message": "Erro ao conectar com o serviço de dados da empresa",
+            "error_code": "CONNECTION_ERROR"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro inesperado: {str(e)}")
+        logger.error(f"Tipo de erro: {type(e).__name__}")
+        import traceback
+        logger.error(f"Stack trace: {traceback.format_exc()}")
+        return {
+            "status": "error",
+            "message": f"Erro ao processar sua solicitação: {str(e)}",
             "error_code": "UNKNOWN_ERROR"
         }
 

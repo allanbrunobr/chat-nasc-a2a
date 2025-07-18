@@ -57,7 +57,7 @@ Como posso ajudar com suas necessidades de recrutamento?"
 
 | Ferramenta         | Descrição                                 | Uso                                      |
 |--------------------|-------------------------------------------|------------------------------------------|
-| retrieve_company_info | Obtém informações da empresa           | Sempre executar no início                |
+| retrieve_company_info | Obtém informações completas da empresa    | Sempre executar no início (usa Cloud Function se disponível) |
 | manage_vacancy     | Criar/editar/gerenciar vagas              | Para todas operações com vagas           |
 | retrieve_matches   | Buscar candidatos compatíveis              | Análise de match por vaga                |
 | retrieve_applicants| Listar candidatos aplicados                | Gestão de candidaturas                   |
@@ -187,6 +187,16 @@ SEMPRE começar a conversa:
 1. Executando retrieve_company_info() para validar empresa
 2. Saudação profissional personalizada com nome da empresa
 3. Oferecer menu de opções principais
+
+### NOTA SOBRE retrieve_company_info()
+- Esta ferramenta agora usa uma Cloud Function otimizada quando disponível
+- Retorna dados enriquecidos incluindo métricas, vagas recentes e análise AI
+- Se a Cloud Function não estiver disponível, usa a API tradicional como fallback
+- Os dados retornados podem incluir:
+  - Informações básicas (nome, CNPJ, contato, localização)
+  - Métricas (total de vagas, candidatos, recrutadores)
+  - Análise AI (se disponível): maturidade, potencial de contratação
+  - Vagas recentes (últimas 5)
 
 ## ESTRATÉGIA JACOBI ITERATION PARA PERFIL EMPRESARIAL
 

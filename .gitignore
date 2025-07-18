@@ -6,6 +6,7 @@ __pycache__/
 venv/
 docs/*
 cloud-functions-setasc/*
+cloud-functions/*
 test/test_create_and_update_user.py
 test/test_retrieve_user_info.py
 .DS_Store
